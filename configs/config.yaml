@@ -20,6 +20,29 @@ validation:
   val_ratio: 0.15
   test_ratio: 0.15
 
+# Phase 3 — data preparation (target selection, features, TFT dataset windows)
+prep:
+  source_dataset: "Data"            # interim parquet stem holding the time series
+  lookup_dataset: "ID_lookup"       # interim parquet stem holding series metadata
+  target_series_type: "Cost Index"  # only series of this type are forecast
+  columns:
+    date: "Date"
+    series_id: "ID"
+    value: "Index value ($)"
+    series_type: "Series type"
+    lookup_id: "Series ID"
+    concept: "Concept"
+    region: "Region"
+  target_column: "target"           # name of the value column in the processed panel
+  quarter_period: 4                 # seasonal period used for sin/cos encoding
+  max_encoder_length: 16
+  min_encoder_length: 16            # = max: no shortened-encoder windows in any split
+  max_prediction_length: 4
+  normalizer_method: "standard"     # per-ID mean/std, fitted on train rows only
+  panel_file: "panel.parquet"
+  scaler_file: "scaler.json"
+  summary_file: "split_summary.json"
+
 metrics:
   primary: "mape"
   secondary:

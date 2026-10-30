@@ -100,6 +100,42 @@ def eda(
 
 
 # ---------------------------------------------------------------------------
+# Phase 3 commands
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def prep(
+    config: ConfigOption = Path("configs/config.yaml"),
+) -> None:
+    """Prepare the model-ready panel, temporal split, scaler and TFT datasets."""
+    cfg = _init(config)
+
+    import pandas as pd
+
+    from ta_forecasting.data.prepare import build_timeseries_datasets, run_prep
+
+    result = run_prep(cfg)
+    summary = result.summary
+    typer.echo(
+        f"Panel: {summary['n_rows']} rows, {summary['n_series']} series, "
+        f"{summary['n_quarters']} quarters"
+    )
+    for name, info in summary["splits"].items():
+        typer.echo(
+            f"  {name:<5} {info['start_quarter']} - {info['end_quarter']} "
+            f"({info['n_quarters']} quarters, {info['n_rows']} rows)"
+        )
+
+    panel = pd.read_parquet(result.panel_path)
+    datasets = build_timeseries_datasets(panel, cfg)
+    names = ("train", "val", "test")
+    sizes = ", ".join(f"{n}={len(ds)}" for n, ds in zip(names, datasets, strict=True))
+    typer.echo(f"TimeSeriesDataSet windows: {sizes}")
+    typer.echo(f"Saved artefacts to {cfg.data.processed_dir}/")
+
+
+# ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
 

@@ -45,11 +45,25 @@ def filter_after_last_actual(
     """
     cutoff = _quarter_to_period(last_actual_quarter)
 
-    # Try to convert the time column to Period
-    periods = pd.PeriodIndex(df[time_col].astype(str), freq="Q")
+    # Convert the time column safely to quarterly PeriodIndex
+    if pd.api.types.is_datetime64_any_dtype(df[time_col]):
+        periods = df[time_col].dt.to_period("Q")
+    elif isinstance(df[time_col].dtype, pd.PeriodDtype):
+        periods = df[time_col]
+    else:
+        # String dates (e.g. '2026-03-31') or quarter strings (e.g. '2026Q1')
+        try:
+            periods = pd.PeriodIndex(df[time_col].astype(str), freq="Q")
+        except Exception:
+            dt_series = pd.to_datetime(df[time_col], errors="coerce")
+            periods = dt_series.dt.to_period("Q")
 
-    mask = periods <= cutoff
+    if isinstance(periods, pd.Series):
+        mask = (periods <= cutoff).fillna(False).to_numpy()
+    else:
+        mask = (periods <= cutoff) & ~periods.isna()
     n_before = len(df)
+
     filtered = df.loc[mask].copy()
     n_removed = n_before - len(filtered)
 
@@ -88,38 +102,80 @@ def transform_sheets(
     transformed: dict[str, pd.DataFrame] = {}
 
     for name, df in sheets.items():
-        logger.info("Transforming sheet '%s' (%d rows × %d cols)", name, len(df), len(df.columns))
+        logger.info(
+            "Transforming sheet '%s' (%d rows × %d cols)",
+            name,
+            len(df),
+            len(df.columns),
+        )
 
-        # Identify potential time columns (heuristic — will refine in Phase 2 execution)
-        time_cols = [
-            c for c in df.columns
-            if any(kw in str(c).lower() for kw in ("quarter", "date", "period", "year", "q"))
-        ]
+        df_out = df.copy()
 
-        if time_cols:
-            # Use the first matching column as temporal key
-            time_col = time_cols[0]
-            logger.info("Using '%s' as temporal column for sheet '%s'", time_col, name)
+        # Handle sheet 'Data' specifically (primary time series dataset)
+        if name == "Data" and "Date" in df_out.columns:
+            # Ensure Date is datetime
+            df_out["Date"] = pd.to_datetime(df_out["Date"], errors="coerce")
+            df_out = df_out.dropna(subset=["Date"]).copy()
 
-            try:
-                df = filter_after_last_actual(
-                    df,
-                    time_col=time_col,
-                    last_actual_quarter=config.project.last_actual_quarter,
-                )
-            except Exception:
-                logger.warning(
-                    "Could not apply temporal filter on '%s' in sheet '%s' — "
-                    "column may need manual inspection",
-                    time_col,
-                    name,
-                )
-        else:
-            logger.warning(
-                "No temporal column detected in sheet '%s' — skipping temporal filter",
-                name,
+            # Filter projections after LAST_ACTUAL_QUARTER
+            df_out = filter_after_last_actual(
+                df_out,
+                time_col="Date",
+                last_actual_quarter=config.project.last_actual_quarter,
             )
 
-        transformed[name] = df
+            # Standardize Quarter as string column (e.g. '2000Q1') for easy querying
+            df_out["Quarter"] = df_out["Date"].dt.to_period("Q").astype(str)
+
+            # Ensure numeric index value
+            if "Index value ($)" in df_out.columns:
+                df_out["Index value ($)"] = pd.to_numeric(
+                    df_out["Index value ($)"], errors="coerce"
+                )
+
+            # Ensure string types for identifiers
+            for str_col in ["ID", "Lookup", "Label", "Series type"]:
+                if str_col in df_out.columns:
+                    df_out[str_col] = df_out[str_col].astype(str)
+
+        else:
+            # For other sheets: check if an actual temporal column exists
+            # Only treat as temporal if values can truly be parsed as dates/quarters
+            temporal_col = None
+            for col in df_out.columns:
+                col_name_lower = str(col).lower()
+                is_q = any(kw in col_name_lower for kw in ("quarter", "period"))
+                if is_q and not col_name_lower.startswith("unnamed"):
+                    temporal_col = col
+                    break
+
+                elif "date" in col_name_lower and name != "IO Weight":
+                    # In IO Weight, 'Date' column is actually a model identifier
+                    parsed = pd.to_datetime(df_out[col].head(10), errors="coerce")
+                    if parsed.notna().mean() > 0.5:
+                        temporal_col = col
+                        break
+
+            if temporal_col:
+                logger.info(
+                    "Applying temporal filter on '%s' for sheet '%s'",
+                    temporal_col,
+                    name,
+                )
+                try:
+                    df_out = filter_after_last_actual(
+                        df_out,
+                        time_col=temporal_col,
+                        last_actual_quarter=config.project.last_actual_quarter,
+                    )
+                except Exception:
+                    logger.warning(
+                        "Could not apply temporal filter on '%s' in sheet '%s'",
+                        temporal_col,
+                        name,
+                    )
+
+        transformed[name] = df_out
 
     return transformed
+

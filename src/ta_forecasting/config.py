@@ -49,6 +49,36 @@ class ValidationConfig(BaseModel):
     test_ratio: float = 0.15
 
 
+class PrepColumnsConfig(BaseModel):
+    """Column names of the interim datasets used by the preparation step."""
+
+    date: str = "Date"
+    series_id: str = "ID"
+    value: str = "Index value ($)"
+    series_type: str = "Series type"
+    lookup_id: str = "Series ID"
+    concept: str = "Concept"
+    region: str = "Region"
+
+
+class PrepConfig(BaseModel):
+    """Phase 3 data preparation settings."""
+
+    source_dataset: str = "Data"
+    lookup_dataset: str = "ID_lookup"
+    target_series_type: str = "Cost Index"
+    columns: PrepColumnsConfig = Field(default_factory=PrepColumnsConfig)
+    target_column: str = "target"
+    quarter_period: int = 4
+    max_encoder_length: int = 16
+    min_encoder_length: int = 16
+    max_prediction_length: int = 4
+    normalizer_method: str = "standard"
+    panel_file: str = "panel.parquet"
+    scaler_file: str = "scaler.json"
+    summary_file: str = "split_summary.json"
+
+
 class MetricsConfig(BaseModel):
     """Evaluation metrics."""
 
@@ -107,6 +137,7 @@ class Config(BaseModel):
     project: ProjectConfig = Field(default_factory=ProjectConfig)
     data: DataConfig = Field(default_factory=DataConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
+    prep: PrepConfig = Field(default_factory=PrepConfig)
     metrics: MetricsConfig = Field(default_factory=MetricsConfig)
     ets: ETSConfig = Field(default_factory=ETSConfig)
     arima: ARIMAConfig = Field(default_factory=ARIMAConfig)
