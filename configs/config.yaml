@@ -1,0 +1,61 @@
+# =============================================================================
+# Central configuration — all parameters defined here, no magic numbers in code
+# =============================================================================
+
+project:
+  name: "ta-forecasting"
+  seed: 42
+  last_actual_quarter: "2026Q1"
+
+data:
+  raw_dir: "data/raw"
+  raw_file: "Market_Segment_Cost_Models_-_Q2_2026.xlsx"
+  interim_dir: "data/interim"
+  processed_dir: "data/processed"
+  db_dir: "data/db"
+
+validation:
+  strategy: "temporal_split"
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+metrics:
+  primary: "mape"
+  secondary:
+    - "rmse"
+    - "mae"
+    - "smape"
+
+ets:
+  seasonal_periods: 4       # quarterly data
+  trend: "add"
+  seasonal: "add"
+  damped_trend: true
+
+arima:
+  max_p: 5
+  max_d: 2
+  max_q: 5
+  seasonal_order_P: 2
+  seasonal_order_D: 1
+  seasonal_order_Q: 2
+  seasonal_period: 4
+
+tft:
+  hidden_size: 64
+  attention_head_size: 4
+  dropout: 0.1
+  hidden_continuous_size: 16
+  max_epochs: 100
+  learning_rate: 0.001
+  batch_size: 64
+  gradient_clip_val: 0.1
+  early_stop_patience: 10
+  reduce_lr_patience: 5
+
+output:
+  models_dir: "models"
+  outputs_dir: "outputs"
+  reports_dir: "reports"
+  eda_dir: "outputs/eda"

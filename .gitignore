@@ -1,0 +1,36 @@
+# Data — raw xlsx is proprietary, never commit
+data/raw/*.xlsx
+data/interim/
+data/processed/
+data/db/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.venv/
+venv/
+dist/
+build/
+
+# Models
+models/*.pkl
+models/*.ckpt
+models/*.pt
+
+# IDE
+.vscode/
+.idea/
+*.DS_Store
+.DS_Store
+
+# Outputs & reports (generated)
+outputs/
+reports/*.pdf
+
+# Misc
+*.log
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
