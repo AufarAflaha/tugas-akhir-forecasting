@@ -182,6 +182,59 @@ class TFTConfig(BaseModel):
         return self
 
 
+class ReportFigureConfig(BaseModel):
+    """Figure settings of the Phase 6 report."""
+
+    dpi: int = Field(300, ge=72)
+    size: tuple[float, float] = (8.0, 4.5)
+    font_size: float = Field(10, gt=0)
+    heatmap_cmap: str = "RdYlGn"
+    heatmap_bounds: list[float] = Field(
+        default_factory=lambda: [0.0, 0.001, 0.01, 0.05, 0.1, 1.0]
+    )
+
+    @model_validator(mode="after")
+    def _bounds_increase(self) -> ReportFigureConfig:
+        b = self.heatmap_bounds
+        if len(b) < 2 or any(lo >= hi for lo, hi in zip(b, b[1:], strict=False)):
+            raise ValueError("report.figure.heatmap_bounds must be strictly increasing.")
+        return self
+
+
+class ReportFigureFiles(BaseModel):
+    """File names of the Phase 6 figures."""
+
+    overall: str = "fig_mape_per_model.png"
+    horizon: str = "fig_mape_per_horizon.png"
+    boxplot: str = "fig_mape_per_series_boxplot.png"
+    dm_heatmap: str = "fig_dm_pvalue_heatmap.png"
+
+
+class ReportConfig(BaseModel):
+    """Phase 6 final report settings."""
+
+    output_file: str = "FINAL_REPORT.md"
+    figures_dir: str = "outputs/report"
+    split: str = "test"
+    main_mode: str = "main"
+    sensitivity_mode: str = "refit"
+    model_order: list[str] = Field(
+        default_factory=lambda: ["ets", "arima", "tft", "naive", "seasonal_naive"]
+    )
+    model_labels: dict[str, str] = Field(default_factory=dict)
+    split_labels: dict[str, str] = Field(default_factory=dict)
+    metric_labels: dict[str, str] = Field(default_factory=dict)
+    decimals: int = Field(2, ge=0)
+    p_value_decimals: int = Field(4, ge=1)
+    decimal_separator: str = ","
+    thousands_separator: str = "."
+    forbidden_columns: list[str] = Field(
+        default_factory=lambda: ["ID", "actual", "prediction", "time_idx", "origin"]
+    )
+    figure: ReportFigureConfig = Field(default_factory=ReportFigureConfig)
+    figure_files: ReportFigureFiles = Field(default_factory=ReportFigureFiles)
+
+
 class OutputConfig(BaseModel):
     """Paths to output directories and model artefact file names."""
 
@@ -210,6 +263,7 @@ class Config(BaseModel):
     ets: ETSConfig = Field(default_factory=ETSConfig)
     arima: ARIMAConfig = Field(default_factory=ARIMAConfig)
     tft: TFTConfig = Field(default_factory=TFTConfig)
+    report: ReportConfig = Field(default_factory=ReportConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
 

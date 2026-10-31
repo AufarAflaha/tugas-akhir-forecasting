@@ -16,8 +16,8 @@ Proyek ini mengikuti kerangka kerja **CRISP-DM** dengan fase-fase berikut:
 | 2 | Data Understanding & ELT | ✅ |
 | 3 | Data Preparation | ✅ |
 | 4 | Modeling | ✅ |
-| 5 | Evaluation | ✅ (menunggu persetujuan gate) |
-| 6 | Reporting | ⬜ |
+| 5 | Evaluation | ✅ |
+| 6 | Reporting | ✅ |
 
 
 ## Struktur Proyek
@@ -75,6 +75,9 @@ python -m ta_forecasting.cli train --model all --config configs/config.yaml
 
 # Fase 5: Evaluasi rolling origin (tabel agregat ke reports/, prediksi dan plot ke outputs/eval/)
 python -m ta_forecasting.cli evaluate --config configs/config.yaml
+
+# Fase 6: Laporan akhir (reports/FINAL_REPORT.md) dan grafik skripsi (outputs/report/)
+python -m ta_forecasting.cli report --config configs/config.yaml
 ```
 
 ## Fase 3: Persiapan Data
@@ -149,6 +152,30 @@ Keluaran:
 | `outputs/eval/predictions.parquet`, `per_series_metrics.csv` | Prediksi beserta aktual, metrik per seri | Tidak |
 
 Asumsi Fase 5: A37–A45 di `docs/ASSUMPTIONS.md`.
+
+## Fase 6: Reporting
+
+Modul: `src/ta_forecasting/reporting/` (`inputs.py`, `formatting.py`, `figures.py`,
+`document.py`, `build.py`). Parameter ada di blok `report` pada `configs/config.yaml`
+(path, dpi, ukuran grafik, urutan dan label model, label split dan metrik, jumlah desimal).
+Tidak ada model yang dilatih atau dievaluasi ulang.
+
+| Langkah | Keterangan |
+|---------|------------|
+| Input | Hanya `reports/phase5_*.csv`, `models/training_summary.json`, `models/arima_orders.json` (diringkas menjadi hitungan), dan `data/processed/split_summary.json`. |
+| Validasi | Semua model, split, horizon 1–4, dan pasangan DM harus lengkap. CSV dengan kolom ID, aktual, prediksi, `time_idx`, atau origin ditolak. Laporan tidak ditulis bila memuat ID seri. |
+| Laporan | `reports/FINAL_REPORT.md` (Bahasa Indonesia, koma desimal): ringkasan eksekutif, desain eksperimen, hasil keseluruhan, per horizon, per seri, uji Diebold-Mariano, sensitivitas refit dan waktu komputasi, pembahasan, jawaban RQ1–RQ3 dan kriteria keberhasilan, keterbatasan dan saran, reprodusibilitas. |
+| Grafik | `outputs/report/`: MAPE per model, MAPE per horizon, boxplot MAPE per seri (dari persentil agregat), heatmap p-value DM. PNG 300 dpi. |
+
+Kalimat interpretatif di laporan dipilih berdasarkan angka input, sehingga teks ikut berubah
+bila hasil berubah. Pemetaan ke skripsi: Bagian 1–4 untuk Bab 4, Bagian 5–6 untuk Bab 5.
+
+| Lokasi | Isi | Di-commit? |
+|--------|-----|------------|
+| `reports/FINAL_REPORT.md` | Laporan akhir, agregat saja | Ya (setelah disetujui) |
+| `outputs/report/*.png` | Grafik skripsi, agregat saja | Tidak (`outputs/` di-ignore) |
+
+Asumsi Fase 6: A46–A54 di `docs/ASSUMPTIONS.md`.
 
 
 ## Catatan Penting

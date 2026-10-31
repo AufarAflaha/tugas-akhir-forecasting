@@ -128,6 +128,47 @@ tft:
   deterministic: true
   log_every_n_steps: 10
 
+# Phase 6 — final report. Reads only the Phase 5 aggregate CSVs, training_summary.json,
+# arima_orders.json (counted, never listed) and split_summary.json. No model is re-run.
+report:
+  output_file: "FINAL_REPORT.md"        # written to output.reports_dir
+  figures_dir: "outputs/report"
+  split: "test"                         # split of the headline comparison
+  main_mode: "main"
+  sensitivity_mode: "refit"
+  model_order: ["ets", "arima", "tft", "naive", "seasonal_naive"]
+  model_labels:
+    ets: "ETS"
+    arima: "ARIMA"
+    tft: "TFT"
+    naive: "Naive"
+    seasonal_naive: "Seasonal naive"
+  split_labels:
+    train: "Latih"
+    val: "Validasi"
+    test: "Uji"
+  metric_labels:
+    mape: "MAPE (%)"
+    rmse: "RMSE"
+    mae: "MAE"
+    smape: "SMAPE (%)"
+  decimals: 2                           # metric values in tables and text
+  p_value_decimals: 4
+  decimal_separator: ","                # Indonesian convention
+  thousands_separator: "."
+  forbidden_columns: ["ID", "actual", "prediction", "time_idx", "origin"]
+  figure:
+    dpi: 300
+    size: [8.0, 4.5]
+    font_size: 10
+    heatmap_cmap: "RdYlGn"
+    heatmap_bounds: [0.0, 0.001, 0.01, 0.05, 0.1, 1.0]
+  figure_files:
+    overall: "fig_mape_per_model.png"
+    horizon: "fig_mape_per_horizon.png"
+    boxplot: "fig_mape_per_series_boxplot.png"
+    dm_heatmap: "fig_dm_pvalue_heatmap.png"
+
 output:
   models_dir: "models"
   outputs_dir: "outputs"

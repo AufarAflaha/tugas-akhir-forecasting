@@ -195,6 +195,29 @@ def evaluate(
 
 
 # ---------------------------------------------------------------------------
+# Phase 6 commands
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def report(
+    config: ConfigOption = Path("configs/config.yaml"),
+) -> None:
+    """Final report (Markdown, Indonesian) and thesis figures from the Phase 5 aggregates."""
+    cfg = _init(config)
+
+    from ta_forecasting.models.train import setup_logging
+    from ta_forecasting.reporting.build import run_report
+
+    log_path = setup_logging(cfg, "report.log")
+    result = run_report(cfg)
+    typer.echo(f"Report: {result.report_path} ({len(result.tables)} tables)")
+    for key, path in result.figures.items():
+        typer.echo(f"  {key:<11} {path}")
+    typer.echo(f"Log: {log_path}")
+
+
+# ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
 
