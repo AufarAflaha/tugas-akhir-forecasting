@@ -15,7 +15,7 @@ Proyek ini mengikuti kerangka kerja **CRISP-DM** dengan fase-fase berikut:
 | 1 | Business Understanding | ✅ |
 | 2 | Data Understanding & ELT | ✅ |
 | 3 | Data Preparation | ✅ |
-| 4 | Modeling | ⬜ |
+| 4 | Modeling | ✅ (menunggu persetujuan gate) |
 | 5 | Evaluation | ⬜ |
 | 6 | Reporting | ⬜ |
 
@@ -69,6 +69,9 @@ python -m ta_forecasting.cli eda --config configs/config.yaml
 
 # Fase 3: Persiapan data (panel, split temporal, scaler, dataset TFT) ke data/processed/
 python -m ta_forecasting.cli prep --config configs/config.yaml
+
+# Fase 4: Pelatihan model (ets | arima | tft | all) ke models/
+python -m ta_forecasting.cli train --model all --config configs/config.yaml
 ```
 
 ## Fase 3: Persiapan Data
@@ -85,6 +88,38 @@ Modul: `src/ta_forecasting/data/prepare.py`. Semua parameter ada di blok `prep` 
 
 Keluaran di `data/processed/`: `panel.parquet`, `scaler.json`, `split_summary.json`
 (hanya batas kuartal dan jumlah baris). Folder ini tidak di-commit.
+
+## Fase 4: Modeling
+
+Modul: `src/ta_forecasting/models/`. Parameter ada di blok `rolling`, `ets`, `arima`, `tft`,
+dan `output` pada `configs/config.yaml`.
+
+| Model | Berkas | Ringkasan |
+|-------|--------|-----------|
+| Antarmuka | `base.py`, `statistical.py` | `fit(train, val=None)`, `predict(horizon)`, `forecast(history, horizon)`, `save(path)`, `load(path)`. Keluaran: `[ID, origin, step, time_idx, prediction]`. Kuartal setelah `last_actual_quarter` ditolak. |
+| ETS | `ets.py` | `ExponentialSmoothing` per seri: tren aditif teredam, musiman aditif (periode 4). Seri yang tidak konvergen hanya dicatat. Fallback tanpa musiman hanya bila fit gagal. |
+| ARIMA | `arima.py` | `SARIMAX` per seri. `D` dari kekuatan musiman STL (> 0,64), `d` dari KPSS (α = 0,05), lalu grid p, q ≤ 3 dan P, Q ≤ 1 dipilih dengan AIC. Order terpilih per seri disimpan. |
+| TFT | `tft.py` | Satu model global, `QuantileLoss` (median sebagai titik prediksi), early stopping dan checkpoint terbaik pada `val_loss`, `ReduceLROnPlateau`, seed 42, deterministik, CPU (deteksi otomatis dengan fallback ke CPU). |
+
+Data yang dipakai: ETS dan ARIMA hanya baris train (2000Q1–2018Q2). TFT dilatih pada train,
+dengan baris val (2018Q3–2022Q1) untuk early stopping dan pemilihan checkpoint. Baris test tidak
+dibaca pada tahap ini.
+
+Protokol rolling origin (dipakai di Fase 5): horizon 4 kuartal dan origin yang sama untuk ketiga
+model. Dengan `rolling.refit_statistical: false` (default), ETS dan ARIMA memakai parameter train
+dan hanya memperbarui state dengan history sebelum origin, sama seperti TFT yang bobotnya tetap.
+
+Artefak di `models/`:
+
+| Berkas | Isi |
+|--------|-----|
+| `ets.pkl`, `arima.pkl` | Model per seri (pickle; berisi turunan data, tidak di-commit) |
+| `arima_orders.json` | Order, order musiman, tren, status konvergensi per seri (tanpa nilai data) |
+| `tft.ckpt` | Checkpoint TFT terbaik (tidak di-commit) |
+| `training_summary.json` | Waktu latih, jumlah seri tidak konvergen atau fallback, distribusi order, epoch, `val_loss` terbaik, versi paket |
+
+Log pelatihan: `outputs/logs/train_<model>.log`. Keputusan dan asumsi Fase 4: A24–A35 di
+`docs/ASSUMPTIONS.md`.
 
 
 ## Catatan Penting

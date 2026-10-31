@@ -182,10 +182,14 @@ def add_features(df: pd.DataFrame, cfg: Config) -> pd.DataFrame:
 
     out[TIME_IDX] = pd.Index(dates).get_indexer(pd.DatetimeIndex(out[c.date])).astype(int)
     out[QUARTER] = out[c.date].dt.quarter.astype(int)
-    angle = 2.0 * np.pi * out[QUARTER] / cfg.prep.quarter_period
-    out[QUARTER_SIN] = np.sin(angle)
-    out[QUARTER_COS] = np.cos(angle)
+    out[QUARTER_SIN], out[QUARTER_COS] = quarter_encoding(out[QUARTER], cfg.prep.quarter_period)
     return out
+
+
+def quarter_encoding(quarter: pd.Series, period: int) -> tuple[pd.Series, pd.Series]:
+    """Return the (sin, cos) encoding of a quarter number (1..period)."""
+    angle = 2.0 * np.pi * quarter / period
+    return np.sin(angle), np.cos(angle)
 
 
 # ---------------------------------------------------------------------------
@@ -325,6 +329,67 @@ def load_scaler(path: Path, cfg: Config) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
+def static_categoricals(cfg: Config) -> list[str]:
+    """Static categorical columns of the TFT, in model order."""
+    c = cfg.prep.columns
+    return [c.series_id, c.concept, c.region, c.series_type]
+
+
+def as_tft_frame(df: pd.DataFrame, cfg: Config) -> pd.DataFrame:
+    """Copy of ``df`` with static categoricals cast to ``str`` (required by the encoders)."""
+    frame = df.copy()
+    for col in static_categoricals(cfg):
+        frame[col] = frame[col].astype(str)
+    return frame
+
+
+def build_training_dataset(train_df: pd.DataFrame, cfg: Config) -> TimeSeriesDataSet:
+    """Build the training ``TimeSeriesDataSet``; its normalizers are fitted on ``train_df``."""
+    from pytorch_forecasting import TimeSeriesDataSet
+    from pytorch_forecasting.data import GroupNormalizer
+
+    c = cfg.prep.columns
+    p = cfg.prep
+    return TimeSeriesDataSet(
+        as_tft_frame(train_df, cfg),
+        time_idx=TIME_IDX,
+        target=p.target_column,
+        group_ids=[c.series_id],
+        min_encoder_length=p.min_encoder_length,
+        max_encoder_length=p.max_encoder_length,
+        min_prediction_length=p.max_prediction_length,
+        max_prediction_length=p.max_prediction_length,
+        static_categoricals=static_categoricals(cfg),
+        time_varying_known_reals=[TIME_IDX, QUARTER_SIN, QUARTER_COS],
+        time_varying_unknown_reals=[p.target_column],
+        target_normalizer=GroupNormalizer(groups=[c.series_id], method=p.normalizer_method),
+    )
+
+
+def build_evaluation_dataset(
+    training: TimeSeriesDataSet,
+    frame: pd.DataFrame,
+    first_idx: int,
+    last_idx: int,
+    cfg: Config,
+) -> TimeSeriesDataSet:
+    """Evaluation windows whose predicted targets all lie in ``[first_idx, last_idx]``.
+
+    Encoder context may reach back before ``first_idx`` (known past). Rows after ``last_idx``
+    are cut, and ``min_encoder_length`` equals ``max_encoder_length`` so no shortened-encoder
+    copies of the final window are added.
+    """
+    from pytorch_forecasting import TimeSeriesDataSet
+
+    return TimeSeriesDataSet.from_dataset(
+        training,
+        as_tft_frame(frame[frame[TIME_IDX] <= last_idx], cfg),
+        min_prediction_idx=first_idx,
+        min_encoder_length=cfg.prep.max_encoder_length,
+        stop_randomization=True,
+    )
+
+
 def build_timeseries_datasets(
     panel: pd.DataFrame, cfg: Config
 ) -> tuple[TimeSeriesDataSet, TimeSeriesDataSet, TimeSeriesDataSet]:
@@ -339,51 +404,10 @@ def build_timeseries_datasets(
       Otherwise pytorch-forecasting appends shortened-encoder copies of the final window,
       which would count the last targets several times in the evaluation.
     """
-    from pytorch_forecasting import TimeSeriesDataSet
-    from pytorch_forecasting.data import GroupNormalizer
-
-    c = cfg.prep.columns
-    p = cfg.prep
     bounds = split_bounds(panel)
-
-    frame = panel.copy()
-    static_categoricals = [c.series_id, c.concept, c.region, c.series_type]
-    for col in static_categoricals:
-        frame[col] = frame[col].astype(str)
-
-    train_df = frame[frame[SPLIT_COLUMN] == TRAIN]
-    training = TimeSeriesDataSet(
-        train_df,
-        time_idx=TIME_IDX,
-        target=p.target_column,
-        group_ids=[c.series_id],
-        min_encoder_length=p.min_encoder_length,
-        max_encoder_length=p.max_encoder_length,
-        min_prediction_length=p.max_prediction_length,
-        max_prediction_length=p.max_prediction_length,
-        static_categoricals=static_categoricals,
-        time_varying_known_reals=[TIME_IDX, QUARTER_SIN, QUARTER_COS],
-        time_varying_unknown_reals=[p.target_column],
-        target_normalizer=GroupNormalizer(groups=[c.series_id], method=p.normalizer_method),
-    )
-
-    val_start, val_end = bounds[VAL]
-    validation = TimeSeriesDataSet.from_dataset(
-        training,
-        frame[frame[TIME_IDX] <= val_end],
-        min_prediction_idx=val_start,
-        min_encoder_length=p.max_encoder_length,
-        stop_randomization=True,
-    )
-
-    test_start, test_end = bounds[TEST]
-    test = TimeSeriesDataSet.from_dataset(
-        training,
-        frame[frame[TIME_IDX] <= test_end],
-        min_prediction_idx=test_start,
-        min_encoder_length=p.max_encoder_length,
-        stop_randomization=True,
-    )
+    training = build_training_dataset(panel[panel[SPLIT_COLUMN] == TRAIN], cfg)
+    validation = build_evaluation_dataset(training, panel, *bounds[VAL], cfg)
+    test = build_evaluation_dataset(training, panel, *bounds[TEST], cfg)
     return training, validation, test
 
 

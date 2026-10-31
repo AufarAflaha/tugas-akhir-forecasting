@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import random
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------------------
 # Pydantic models for config sections
@@ -86,29 +86,48 @@ class MetricsConfig(BaseModel):
     secondary: list[str] = Field(default_factory=lambda: ["rmse", "mae", "smape"])
 
 
+class RollingConfig(BaseModel):
+    """Rolling-origin forecasting protocol shared by all models."""
+
+    refit_statistical: bool = False
+
+
 class ETSConfig(BaseModel):
     """ETS model hyperparameters."""
 
     seasonal_periods: int = 4
-    trend: str = "add"
-    seasonal: str = "add"
+    trend: str | None = "add"
+    seasonal: str | None = "add"
     damped_trend: bool = True
+    initialization_method: str = "estimated"
+    fallback_seasonal: str | None = None
 
 
 class ARIMAConfig(BaseModel):
-    """ARIMA model hyperparameters."""
+    """ARIMA order-search bounds and fitting options."""
 
-    max_p: int = 5
-    max_d: int = 2
-    max_q: int = 5
-    seasonal_order_P: int = 2
-    seasonal_order_D: int = 1
-    seasonal_order_Q: int = 2
-    seasonal_period: int = 4
+    max_p: int = Field(3, ge=0)
+    max_d: int = Field(2, ge=0)
+    max_q: int = Field(3, ge=0)
+    max_P: int = Field(1, ge=0)
+    max_D: int = Field(1, ge=0)
+    max_Q: int = Field(1, ge=0)
+    seasonal_period: int = Field(4, ge=2)
+    kpss_alpha: float = Field(0.05, gt=0, lt=1)
+    kpss_regression: Literal["c", "ct"] = "c"
+    kpss_nlags: str | int = "auto"
+    seasonal_strength_threshold: float = Field(0.64, ge=0, le=1)
+    information_criterion: Literal["aic", "aicc", "bic"] = "aic"
+    constant_max_total_diff: int = Field(1, ge=0)
+    fit_method: str = "lbfgs"
+    maxiter: int = Field(200, ge=1)
+    enforce_stationarity: bool = True
+    enforce_invertibility: bool = True
+    n_jobs: int = 1
 
 
 class TFTConfig(BaseModel):
-    """TFT model hyperparameters."""
+    """TFT model hyperparameters and trainer settings."""
 
     hidden_size: int = 64
     attention_head_size: int = 4
@@ -120,15 +139,38 @@ class TFTConfig(BaseModel):
     gradient_clip_val: float = 0.1
     early_stop_patience: int = 10
     reduce_lr_patience: int = 5
+    quantiles: list[float] = Field(
+        default_factory=lambda: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
+    )
+    point_quantile: float = 0.5
+    monitor: str = "val_loss"
+    accelerator: Literal["auto", "cpu", "gpu", "cuda", "mps"] = "auto"
+    devices: int = 1
+    num_threads: int = Field(4, ge=1)
+    num_workers: int = Field(0, ge=0)
+    deterministic: bool = True
+    log_every_n_steps: int = Field(10, ge=1)
+
+    @model_validator(mode="after")
+    def _point_quantile_is_listed(self) -> TFTConfig:
+        if self.point_quantile not in self.quantiles:
+            raise ValueError("tft.point_quantile must be one of tft.quantiles.")
+        return self
 
 
 class OutputConfig(BaseModel):
-    """Paths to output directories."""
+    """Paths to output directories and model artefact file names."""
 
     models_dir: str = "models"
     outputs_dir: str = "outputs"
     reports_dir: str = "reports"
     eda_dir: str = "outputs/eda"
+    logs_dir: str = "outputs/logs"
+    ets_file: str = "ets.pkl"
+    arima_file: str = "arima.pkl"
+    arima_orders_file: str = "arima_orders.json"
+    tft_file: str = "tft.ckpt"
+    training_summary_file: str = "training_summary.json"
 
 
 class Config(BaseModel):
@@ -139,6 +181,7 @@ class Config(BaseModel):
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     prep: PrepConfig = Field(default_factory=PrepConfig)
     metrics: MetricsConfig = Field(default_factory=MetricsConfig)
+    rolling: RollingConfig = Field(default_factory=RollingConfig)
     ets: ETSConfig = Field(default_factory=ETSConfig)
     arima: ARIMAConfig = Field(default_factory=ARIMAConfig)
     tft: TFTConfig = Field(default_factory=TFTConfig)

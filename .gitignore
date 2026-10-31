@@ -18,6 +18,8 @@ build/
 models/*.pkl
 models/*.ckpt
 models/*.pt
+# models/*.json holds series IDs from the licensed workbook
+models/*.json
 
 # IDE
 .vscode/

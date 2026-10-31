@@ -50,20 +50,43 @@ metrics:
     - "mae"
     - "smape"
 
+# Phase 4 — rolling-origin forecasting protocol shared by all models.
+# Horizon = prep.max_prediction_length. Order / configuration of ETS and ARIMA is always
+# chosen on train only. refit_statistical=false: at each origin ETS/ARIMA keep their train
+# parameters and only update their state with the history (like the TFT, whose weights are
+# fixed after training). true: parameters are re-estimated on the history at every origin.
+rolling:
+  refit_statistical: false
+
 ets:
   seasonal_periods: 4       # quarterly data
   trend: "add"
   seasonal: "add"
   damped_trend: true
+  initialization_method: "estimated"
+  fallback_seasonal: null   # used only if the primary fit raises or gives non-finite output
 
 arima:
-  max_p: 5
+  # Order search per series on train only: D by seasonal strength, then d by KPSS on the
+  # seasonally differenced series, then an exhaustive (p, q, P, Q) grid ranked by AIC.
+  max_p: 3
   max_d: 2
-  max_q: 5
-  seasonal_order_P: 2
-  seasonal_order_D: 1
-  seasonal_order_Q: 2
+  max_q: 3
+  max_P: 1
+  max_D: 1
+  max_Q: 1
   seasonal_period: 4
+  kpss_alpha: 0.05
+  kpss_regression: "c"
+  kpss_nlags: "auto"
+  seasonal_strength_threshold: 0.64   # Wang, Smith & Hyndman (2006); forecast::nsdiffs
+  information_criterion: "aic"
+  constant_max_total_diff: 1          # constant/drift only when d + D <= this
+  fit_method: "lbfgs"
+  maxiter: 200
+  enforce_stationarity: true
+  enforce_invertibility: true
+  n_jobs: 4                           # parallel series in the order search (joblib)
 
 tft:
   hidden_size: 64
@@ -76,9 +99,24 @@ tft:
   gradient_clip_val: 0.1
   early_stop_patience: 10
   reduce_lr_patience: 5
+  quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
+  point_quantile: 0.5       # median is the point forecast
+  monitor: "val_loss"
+  accelerator: "auto"       # auto -> cuda / mps if available, else cpu
+  devices: 1
+  num_threads: 4            # torch intra-op threads on CPU
+  num_workers: 0
+  deterministic: true
+  log_every_n_steps: 10
 
 output:
   models_dir: "models"
   outputs_dir: "outputs"
   reports_dir: "reports"
   eda_dir: "outputs/eda"
+  logs_dir: "outputs/logs"
+  ets_file: "ets.pkl"
+  arima_file: "arima.pkl"
+  arima_orders_file: "arima_orders.json"
+  tft_file: "tft.ckpt"
+  training_summary_file: "training_summary.json"

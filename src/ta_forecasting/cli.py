@@ -6,6 +6,7 @@ Usage: ta-forecasting <command> --config configs/config.yaml
 
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
@@ -133,6 +134,42 @@ def prep(
     sizes = ", ".join(f"{n}={len(ds)}" for n, ds in zip(names, datasets, strict=True))
     typer.echo(f"TimeSeriesDataSet windows: {sizes}")
     typer.echo(f"Saved artefacts to {cfg.data.processed_dir}/")
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 commands
+# ---------------------------------------------------------------------------
+
+
+class ModelChoice(StrEnum):
+    """Models accepted by ``train --model``."""
+
+    ets = "ets"
+    arima = "arima"
+    tft = "tft"
+    all = "all"
+
+
+@app.command()
+def train(
+    model: Annotated[
+        ModelChoice, typer.Option("--model", "-m", help="Model to train")
+    ] = ModelChoice.all,
+    config: ConfigOption = Path("configs/config.yaml"),
+) -> None:
+    """Train ETS / ARIMA / TFT on train (and val for TFT) and save artefacts to models/."""
+    cfg = _init(config)
+
+    from ta_forecasting.models.train import resolve_names, setup_logging, train_models
+
+    log_path = setup_logging(cfg, f"train_{model.value}.log")
+    names = resolve_names(model.value)
+    summary = train_models(cfg, names)
+    for name in names:
+        info = summary["models"][name]
+        typer.echo(f"{name}: {info['fit_seconds']:.1f} s -> {', '.join(info['artefacts'])}")
+    summary_file = Path(cfg.output.models_dir) / cfg.output.training_summary_file
+    typer.echo(f"Summary: {summary_file} | log: {log_path}")
 
 
 # ---------------------------------------------------------------------------
