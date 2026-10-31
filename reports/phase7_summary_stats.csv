@@ -1,0 +1,9 @@
+model,window,n_series,n_flat,n_within_error,n_cheapest_is_step1,median_change_pct,n_agree_with_consensus
+ets,full,116,0,114,20,-0.1402,112
+arima,full,116,0,94,76,2.163,42
+tft,full,116,0,11,2,-25.9855,98
+naive,full,116,116,0,0,0.0,0
+ets,short,116,0,114,20,-0.1402,112
+arima,short,116,0,96,76,2.163,44
+tft,short,116,0,11,2,-25.9855,98
+naive,short,116,116,0,0,0.0,0

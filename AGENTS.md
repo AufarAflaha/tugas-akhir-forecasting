@@ -9,6 +9,7 @@ Skripsi Sistem Informasi, Universitas Telkom. Metodologi CRISP-DM. Tiga algoritm
 3. Jangan menampilkan, menempel, atau merangkum baris data mentah di chat, artifact, laporan, atau log. Yang boleh: skema, jumlah baris, dan statistik agregat.
 4. Jangan mengirim data atau turunan datanya ke layanan eksternal. Tidak ada panggilan jaringan selain instalasi paket dari PyPI.
 5. Nilai proyeksi S&P (setelah LAST_ACTUAL_QUARTER) tidak boleh dipakai untuk fitting, validasi, atau pengujian model.
+6. Pengecualian aturan no. 3, khusus dashboard (Fase 7): dashboard boleh menampilkan nilai seri asli dan ramalan per seri kepada pengguna internal. Dashboard hanya berjalan lokal atau di jaringan internal, tidak di-deploy publik, dan datanya tidak di-commit. Pengecualian ini tidak berlaku untuk chat, laporan, artifact, atau log; aturan lain tetap berlaku.
 
 ## Standar kode
 - Python 3.11+, type hints, ruff, pytest, tata letak src/.

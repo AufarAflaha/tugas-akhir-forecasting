@@ -18,6 +18,7 @@ Proyek ini mengikuti kerangka kerja **CRISP-DM** dengan fase-fase berikut:
 | 4 | Modeling | ✅ |
 | 5 | Evaluation | ✅ |
 | 6 | Reporting | ✅ |
+| 7 | Deployment: ramalan sampai 2031 (7a) dan dashboard (7b) | 🔄 7a ✅, 7b sedang dikerjakan |
 
 
 ## Struktur Proyek
@@ -78,6 +79,9 @@ python -m ta_forecasting.cli evaluate --config configs/config.yaml
 
 # Fase 6: Laporan akhir (reports/FINAL_REPORT.md) dan grafik skripsi (outputs/report/)
 python -m ta_forecasting.cli report --config configs/config.yaml
+
+# Fase 7a: Backtest jangka panjang, interval empiris, dan ramalan sampai 2031Q4
+python -m ta_forecasting.cli forecast --config configs/config.yaml
 ```
 
 ## Fase 3: Persiapan Data
@@ -176,6 +180,28 @@ bila hasil berubah. Pemetaan ke skripsi: Bagian 1–4 untuk Bab 4, Bagian 5–6 
 | `outputs/report/*.png` | Grafik skripsi, agregat saja | Tidak (`outputs/` di-ignore) |
 
 Asumsi Fase 6: A46–A54 di `docs/ASSUMPTIONS.md`.
+
+## Fase 7a: Ramalan dan galat per horizon
+
+Modul: `src/ta_forecasting/forecasting/` (`horizon.py`, `long_backtest.py`, `intervals.py`,
+`summary.py`, `run.py`). Parameter ada di blok `forecast` pada `configs/config.yaml`.
+Model Fase 4 hanya di-load; prosedurnya sama dengan hasil utama Fase 5
+(`refit_statistical = false`).
+
+| Langkah | Keterangan |
+|---------|------------|
+| Backtest jangka panjang | ETS, ARIMA, naive h = 1–23, TFT h = 1–4. Origin di setiap kuartal mulai 2018Q3; hanya target aktual (≤ 2026Q1) yang dinilai. Jumlah origin turun dari 31 (h = 1) ke 9 (h = 23). |
+| Interval prediksi | Empiris 80%, seragam untuk semua model: kuantil rasio aktual/ramalan per model per horizon. Cakupan diuji out-of-sample (kalibrasi origin val, cek origin test). |
+| Ramalan produksi | Dari seluruh data aktual sampai 2026Q1: ETS, ARIMA, naive 2026Q2–2031Q4; TFT 2026Q2–2027Q1. Kolom `validated` menandai h ≤ 4. |
+| Ringkasan per seri | Per model dan jendela (h 1–4 / sampai 2031Q4): kuartal termurah, selisih % terhadap 2026Q1, MAPE pada horizon itu, `within_error`, dan kesepakatan antar model. Tidak ada rekomendasi tunggal. |
+
+| Lokasi | Isi | Di-commit? |
+|--------|-----|------------|
+| `data/processed/forecast.parquet`, `forecast_summary.parquet` | Ramalan dan ringkasan per seri | Tidak |
+| `reports/phase7_*.csv`, `reports/phase7_long_horizon.md` | Galat per horizon, kuantil interval, cakupan, ringkasan jumlah seri (agregat) | Ya (setelah disetujui) |
+
+Asumsi Fase 7a: A55–A61 di `docs/ASSUMPTIONS.md`. Pengecualian data untuk dashboard: aturan
+no. 6 di `AGENTS.md`.
 
 
 ## Catatan Penting

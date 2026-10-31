@@ -169,6 +169,26 @@ report:
     boxplot: "fig_mape_per_series_boxplot.png"
     dm_heatmap: "fig_dm_pvalue_heatmap.png"
 
+# Phase 7a — production forecasts to `end_quarter` and long-horizon error per step.
+# Same procedure as the Phase 5 main run (refit_statistical = false): Phase 4 artefacts are
+# loaded, never retrained, and their state is updated with all actuals up to
+# project.last_actual_quarter. Models whose training horizon is shorter (TFT:
+# prep.max_prediction_length) are forecast only up to that horizon.
+forecast:
+  models: ["ets", "arima", "tft", "naive"]
+  max_horizon_models: ["tft"]           # limited to prep.max_prediction_length
+  end_quarter: "2031Q4"
+  backtest_first_split: "val"           # long-horizon origins start at this split ...
+  calibration_split: "val"              # ... intervals for the coverage check use these origins
+  coverage_split: "test"                # ... and are checked on origins in this split
+  interval_level: 0.8                   # central empirical prediction interval
+  flat_tolerance: 1.0e-9                # relative range below which a forecast path is flat
+  composition_note_drop: 0.1            # report note when MAPE at the last step is >10% below its peak
+  n_jobs: 4
+  forecast_file: "forecast.parquet"     # in data.processed_dir (series-level, not committed)
+  summary_file: "forecast_summary.parquet"
+  report_prefix: "phase7"               # aggregate tables in output.reports_dir
+
 output:
   models_dir: "models"
   outputs_dir: "outputs"

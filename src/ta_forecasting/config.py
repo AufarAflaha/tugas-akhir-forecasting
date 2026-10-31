@@ -235,6 +235,26 @@ class ReportConfig(BaseModel):
     figure_files: ReportFigureFiles = Field(default_factory=ReportFigureFiles)
 
 
+class ForecastConfig(BaseModel):
+    """Phase 7a production forecasts and long-horizon backtest."""
+
+    models: list[Literal["ets", "arima", "tft", "naive", "seasonal_naive"]] = Field(
+        default_factory=lambda: ["ets", "arima", "tft", "naive"]
+    )
+    max_horizon_models: list[str] = Field(default_factory=lambda: ["tft"])
+    end_quarter: str = "2031Q4"
+    backtest_first_split: str = "val"
+    calibration_split: str = "val"
+    coverage_split: str = "test"
+    interval_level: float = Field(0.8, gt=0, lt=1)
+    flat_tolerance: float = Field(1e-9, ge=0)
+    composition_note_drop: float = Field(0.1, ge=0, lt=1)
+    n_jobs: int = 1
+    forecast_file: str = "forecast.parquet"
+    summary_file: str = "forecast_summary.parquet"
+    report_prefix: str = "phase7"
+
+
 class OutputConfig(BaseModel):
     """Paths to output directories and model artefact file names."""
 
@@ -264,6 +284,7 @@ class Config(BaseModel):
     arima: ARIMAConfig = Field(default_factory=ARIMAConfig)
     tft: TFTConfig = Field(default_factory=TFTConfig)
     report: ReportConfig = Field(default_factory=ReportConfig)
+    forecast: ForecastConfig = Field(default_factory=ForecastConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
 

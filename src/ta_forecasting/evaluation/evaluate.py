@@ -63,7 +63,8 @@ def load_panel(cfg: Config) -> pd.DataFrame:
     return panel
 
 
-def _load_model(name: str, cfg: Config, panel: pd.DataFrame) -> Forecaster:
+def load_model(name: str, cfg: Config, panel: pd.DataFrame) -> Forecaster:
+    """Load a Phase 4 artefact (or fit a baseline on train) and check its config."""
     if name in BASELINES:
         return BASELINES[name](cfg).fit(panel[panel[SPLIT_COLUMN] == TRAIN])
     model = MODELS[name].load(artefact_path(name, cfg))
@@ -84,13 +85,13 @@ def run_backtests(cfg: Config, panel: pd.DataFrame) -> list[BacktestResult]:
     e = cfg.evaluation
     results = []
     for name in [*e.main_models, *e.baselines]:
-        model = _load_model(name, cfg, panel)
+        model = load_model(name, cfg, panel)
         if model.cfg.rolling.refit_statistical:
             raise ValueError(f"{name}: the main run requires rolling.refit_statistical = false.")
         results.append(run_backtest(model, panel, cfg, MAIN))
     if e.run_sensitivity:
         for name in e.sensitivity_models:
-            model = _load_model(name, cfg, panel)
+            model = load_model(name, cfg, panel)
             model.cfg = _refit_config(model)
             results.append(run_backtest(model, panel, cfg, REFIT))
     return results

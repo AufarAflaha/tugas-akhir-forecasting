@@ -218,6 +218,30 @@ def report(
 
 
 # ---------------------------------------------------------------------------
+# Phase 7 commands
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def forecast(
+    config: ConfigOption = Path("configs/config.yaml"),
+) -> None:
+    """Long-horizon backtest, empirical intervals and forecasts up to forecast.end_quarter."""
+    cfg = _init(config)
+
+    from ta_forecasting.forecasting.run import run_forecast
+    from ta_forecasting.models.train import setup_logging
+
+    log_path = setup_logging(cfg, "forecast.log")
+    result = run_forecast(cfg)
+    for name, group in result.forecast.groupby("model"):
+        typer.echo(f"{name:<6} {group['quarter_label'].min()} - {group['quarter_label'].max()}")
+    for key, value in result.seconds.items():
+        typer.echo(f"{key}: {value:.1f} s")
+    typer.echo(f"Wrote {len(result.files)} file(s) | log: {log_path}")
+
+
+# ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
 

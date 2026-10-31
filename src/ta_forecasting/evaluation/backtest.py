@@ -88,11 +88,17 @@ def run_backtest(
     panel: pd.DataFrame,
     cfg: Config,
     mode: str = MAIN,
+    origins: dict[str, list[int]] | None = None,
+    horizon: int | None = None,
 ) -> BacktestResult:
-    """Forecast every origin of every configured split with ``model``."""
+    """Forecast every origin of every configured split with ``model``.
+
+    ``origins`` and ``horizon`` default to the Phase 5 protocol (``split_origins`` and
+    ``prep.max_prediction_length``). Targets beyond the panel get a missing actual.
+    """
     check_no_projection(panel, cfg)
-    horizon = cfg.prep.max_prediction_length
-    origins = split_origins(panel, cfg)
+    horizon = cfg.prep.max_prediction_length if horizon is None else horizon
+    origins = split_origins(panel, cfg) if origins is None else origins
     sid = cfg.prep.columns.series_id
 
     start = time.perf_counter()
