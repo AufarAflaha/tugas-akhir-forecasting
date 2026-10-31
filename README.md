@@ -15,8 +15,8 @@ Proyek ini mengikuti kerangka kerja **CRISP-DM** dengan fase-fase berikut:
 | 1 | Business Understanding | ✅ |
 | 2 | Data Understanding & ELT | ✅ |
 | 3 | Data Preparation | ✅ |
-| 4 | Modeling | ✅ (menunggu persetujuan gate) |
-| 5 | Evaluation | ⬜ |
+| 4 | Modeling | ✅ |
+| 5 | Evaluation | ✅ (menunggu persetujuan gate) |
 | 6 | Reporting | ⬜ |
 
 
@@ -72,6 +72,9 @@ python -m ta_forecasting.cli prep --config configs/config.yaml
 
 # Fase 4: Pelatihan model (ets | arima | tft | all) ke models/
 python -m ta_forecasting.cli train --model all --config configs/config.yaml
+
+# Fase 5: Evaluasi rolling origin (tabel agregat ke reports/, prediksi dan plot ke outputs/eval/)
+python -m ta_forecasting.cli evaluate --config configs/config.yaml
 ```
 
 ## Fase 3: Persiapan Data
@@ -118,8 +121,34 @@ Artefak di `models/`:
 | `tft.ckpt` | Checkpoint TFT terbaik (tidak di-commit) |
 | `training_summary.json` | Waktu latih, jumlah seri tidak konvergen atau fallback, distribusi order, epoch, `val_loss` terbaik, versi paket |
 
-Log pelatihan: `outputs/logs/train_<model>.log`. Keputusan dan asumsi Fase 4: A24–A35 di
+Log pelatihan: `outputs/logs/train_<model>.log`. Keputusan dan asumsi Fase 4: A24–A36 di
 `docs/ASSUMPTIONS.md`.
+
+## Fase 5: Evaluasi
+
+Modul: `src/ta_forecasting/evaluation/` (`metrics.py`, `backtest.py`, `significance.py`,
+`report.py`, `evaluate.py`) dan `src/ta_forecasting/models/baselines.py`. Parameter ada di
+blok `metrics` dan `evaluation` pada `configs/config.yaml`. Model Fase 4 hanya di-load, tidak
+dilatih ulang.
+
+| Langkah | Keterangan |
+|---------|------------|
+| Rolling origin | Horizon 4 kuartal, origin sama untuk semua model: val time_idx 74–85 (12 origin), test 89–101 (13 origin). History = semua data aktual sebelum origin. Hasil utama: `refit_statistical = false`. |
+| Validasi | Jumlah baris = 116 × origin × 4, semua target di dalam split-nya, origin identik antar model. |
+| Metrik | MAPE (utama), RMSE, MAE, SMAPE: keseluruhan, per horizon, per split, distribusi per seri, dan jumlah seri yang dimenangkan tiap model. |
+| Signifikansi | Diebold-Mariano dengan koreksi Harvey-Leybourne-Newbold per pasangan model di test, per horizon: tingkat panel dan per seri (dengan koreksi FDR). |
+| Sensitivitas | ETS dan ARIMA diulang dengan `refit_statistical = true`, dilaporkan terpisah beserta waktu komputasinya. |
+| Baseline | Naive dan seasonal naive sebagai pembanding acuan. |
+
+Keluaran:
+
+| Lokasi | Isi | Di-commit? |
+|--------|-----|------------|
+| `reports/phase5_*.csv`, `reports/phase5_evaluation.md` | Tabel agregat saja | Ya (setelah disetujui) |
+| `outputs/eval/*.png` | Grafik metrik per model, per horizon, boxplot metrik per seri | Tidak |
+| `outputs/eval/predictions.parquet`, `per_series_metrics.csv` | Prediksi beserta aktual, metrik per seri | Tidak |
+
+Asumsi Fase 5: A37–A45 di `docs/ASSUMPTIONS.md`.
 
 
 ## Catatan Penting

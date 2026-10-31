@@ -1,0 +1,8 @@
+model,mode,seconds,n_series_origin_forecasts,log_fixed_parameters,log_refit,log_refit_not_converged
+ets,main,11.74,2900,2900.0,0.0,0.0
+arima,main,9.62,2900,2900.0,0.0,0.0
+tft,main,10.61,2900,0.0,0.0,0.0
+naive,main,4.69,2900,0.0,0.0,0.0
+seasonal_naive,main,5.14,2900,0.0,0.0,0.0
+ets,refit,182.67,2900,0.0,2900.0,0.0
+arima,refit,154.91,2900,0.0,2893.0,7.0

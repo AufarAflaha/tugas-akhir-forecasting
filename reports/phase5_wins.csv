@@ -1,0 +1,3 @@
+split,metric,n_series,ets,arima,tft,tie
+test,mape,116,85,28,3,0
+val,mape,116,23,67,26,0

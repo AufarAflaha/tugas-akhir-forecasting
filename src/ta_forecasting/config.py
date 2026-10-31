@@ -86,6 +86,30 @@ class MetricsConfig(BaseModel):
     secondary: list[str] = Field(default_factory=lambda: ["rmse", "mae", "smape"])
 
 
+class EvaluationConfig(BaseModel):
+    """Phase 5 rolling-origin evaluation settings."""
+
+    splits: list[str] = Field(default_factory=lambda: ["val", "test"])
+    main_models: list[str] = Field(default_factory=lambda: ["ets", "arima", "tft"])
+    baselines: list[Literal["naive", "seasonal_naive"]] = Field(
+        default_factory=lambda: ["naive", "seasonal_naive"]
+    )
+    sensitivity_models: list[Literal["ets", "arima"]] = Field(
+        default_factory=lambda: ["ets", "arima"]
+    )
+    run_sensitivity: bool = True
+    n_jobs: int = 1
+    percentiles: list[float] = Field(default_factory=lambda: [10, 25, 50, 75, 90])
+    dm_split: str = "test"
+    dm_loss: Literal["ape", "ae", "se"] = "ape"
+    dm_alpha: float = Field(0.05, gt=0, lt=1)
+    dm_fdr_method: str = "fdr_bh"
+    output_dir: str = "outputs/eval"
+    predictions_file: str = "predictions.parquet"
+    per_series_file: str = "per_series_metrics.csv"
+    report_prefix: str = "phase5"
+
+
 class RollingConfig(BaseModel):
     """Rolling-origin forecasting protocol shared by all models."""
 
@@ -181,6 +205,7 @@ class Config(BaseModel):
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     prep: PrepConfig = Field(default_factory=PrepConfig)
     metrics: MetricsConfig = Field(default_factory=MetricsConfig)
+    evaluation: EvaluationConfig = Field(default_factory=EvaluationConfig)
     rolling: RollingConfig = Field(default_factory=RollingConfig)
     ets: ETSConfig = Field(default_factory=ETSConfig)
     arima: ARIMAConfig = Field(default_factory=ARIMAConfig)

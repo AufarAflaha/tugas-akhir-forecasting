@@ -50,6 +50,25 @@ metrics:
     - "mae"
     - "smape"
 
+# Phase 5 — rolling-origin evaluation. Origins run from the first quarter of each split to
+# the last quarter whose full horizon (prep.max_prediction_length) still lies in that split.
+evaluation:
+  splits: ["val", "test"]
+  main_models: ["ets", "arima", "tft"]
+  baselines: ["naive", "seasonal_naive"]  # reference only; [] to skip
+  sensitivity_models: ["ets", "arima"]    # re-run with rolling.refit_statistical = true
+  run_sensitivity: true
+  n_jobs: 4                     # parallel series chunks for ETS / ARIMA (results unchanged)
+  percentiles: [10, 25, 50, 75, 90]
+  dm_split: "test"
+  dm_loss: "ape"                # ape | ae | se: loss differential of the Diebold-Mariano test
+  dm_alpha: 0.05
+  dm_fdr_method: "fdr_bh"       # multiple-testing correction over series (statsmodels name)
+  output_dir: "outputs/eval"
+  predictions_file: "predictions.parquet"
+  per_series_file: "per_series_metrics.csv"
+  report_prefix: "phase5"
+
 # Phase 4 — rolling-origin forecasting protocol shared by all models.
 # Horizon = prep.max_prediction_length. Order / configuration of ETS and ARIMA is always
 # chosen on train only. refit_statistical=false: at each origin ETS/ARIMA keep their train

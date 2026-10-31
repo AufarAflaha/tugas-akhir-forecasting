@@ -173,6 +173,28 @@ def train(
 
 
 # ---------------------------------------------------------------------------
+# Phase 5 commands
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def evaluate(
+    config: ConfigOption = Path("configs/config.yaml"),
+) -> None:
+    """Rolling-origin evaluation of the trained models; aggregate tables to reports/."""
+    cfg = _init(config)
+
+    from ta_forecasting.evaluation.evaluate import run_evaluation
+    from ta_forecasting.models.train import setup_logging
+
+    log_path = setup_logging(cfg, "evaluate.log")
+    result = run_evaluation(cfg)
+    for row in result.timing.itertuples(index=False):
+        typer.echo(f"{row.model:<15} {row.mode:<5} backtest {row.seconds:.1f} s")
+    typer.echo(f"Wrote {len(result.files)} file(s) | log: {log_path}")
+
+
+# ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
 

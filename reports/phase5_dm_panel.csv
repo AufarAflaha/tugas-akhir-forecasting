@@ -1,0 +1,13 @@
+model_a,model_b,step,mean_loss_diff,dm_hln,p_value,significant,better,n_origins,variance_fallback
+ets,arima,1,-0.9834,-4.5478,0.0007,True,ets,13,False
+ets,arima,2,-1.6114,-5.5817,0.0001,True,ets,13,False
+ets,arima,3,-0.651,-2.0184,0.0665,False,-,13,False
+ets,arima,4,-0.2365,-0.4928,0.631,False,-,13,False
+ets,tft,1,-10.9901,-19.8023,0.0,True,ets,13,False
+ets,tft,2,-13.1427,-13.0769,0.0,True,ets,13,False
+ets,tft,3,-13.1824,-9.4803,0.0,True,ets,13,False
+ets,tft,4,-13.1209,-7.239,0.0,True,ets,13,False
+arima,tft,1,-10.0067,-14.5838,0.0,True,arima,13,False
+arima,tft,2,-11.5313,-9.8376,0.0,True,arima,13,False
+arima,tft,3,-12.5314,-7.8419,0.0,True,arima,13,False
+arima,tft,4,-12.8844,-5.9835,0.0001,True,arima,13,False

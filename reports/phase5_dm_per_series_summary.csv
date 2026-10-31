@@ -1,0 +1,13 @@
+model_a,model_b,step,n_series,n_undefined,n_variance_fallback,n_sig_a_better,n_sig_b_better,n_sig_a_better_fdr,n_sig_b_better_fdr,n_origins
+ets,arima,1,116,0,0,41,1,7,1,13
+ets,arima,2,116,0,4,50,2,35,1,13
+ets,arima,3,116,0,9,12,3,3,2,13
+ets,arima,4,116,0,10,4,12,0,6,13
+ets,tft,1,116,0,0,108,0,108,0,13
+ets,tft,2,116,0,0,107,1,107,1,13
+ets,tft,3,116,0,0,102,0,102,0,13
+ets,tft,4,116,0,1,96,0,96,0,13
+arima,tft,1,116,0,0,103,1,102,1,13
+arima,tft,2,116,0,1,99,4,99,4,13
+arima,tft,3,116,0,0,98,2,98,2,13
+arima,tft,4,116,0,0,94,0,94,0,13
