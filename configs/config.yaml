@@ -189,6 +189,44 @@ forecast:
   summary_file: "forecast_summary.parquet"
   report_prefix: "phase7"               # aggregate tables in output.reports_dir
 
+# Phase 7b — Streamlit dashboard (local / internal network only; AGENTS.md data rule 6).
+# Reads data/processed (panel, forecasts), data/interim (Cost_Model_Desc, ID_lookup) and the
+# aggregate reports. Never reads data/raw. No outbound network calls.
+dashboard:
+  host: "127.0.0.1"
+  port: 8501
+  gather_usage_stats: false
+  title: "Dashboard Pra-Pengadaan: Indeks Biaya Cost Model"
+  value_label: "Indeks biaya"
+  default_models: ["ets", "arima", "naive"]   # TFT available but off by default (A62)
+  default_base_year: 2003
+  default_start_year: 2003
+  default_concept: null                       # null -> first in alphabetical order
+  interval_max_step: 8                        # intervals shown only up to this step (A62)
+  error_steps: [1, 4, 8, 23]                  # MAPE columns in the comparison table
+  table_decimals: 1
+  description_dataset: "Cost_Model_Desc"      # interim parquet stem
+  description_id: "ID"
+  description_text: "Description"
+  lookup_label: "Label"
+  lookup_currency: "Local currency"
+  colors:
+    actual: "#222222"
+    qoq: "#9ecae1"
+    ets: "#1f77b4"
+    arima: "#ff7f0e"
+    tft: "#2ca02c"
+    naive: "#d62728"
+    validated_band: "rgba(44, 160, 44, 0.07)"
+    long_band: "rgba(127, 127, 127, 0.07)"
+  interval_opacity: 0.15
+  chart_height: 520
+  model_warnings:
+    tft: "TFT hanya dilatih untuk 4 kuartal dan pada data uji meramal jauh di bawah aktual (bias rendah). Gunakan sebagai pembanding, bukan acuan."
+    naive: "Naive = nilai aktual terakhir; garis datar ini adalah patokan, bukan ramalan pergerakan."
+  source_note: "Sumber data: S&P Global Energy, Market Segment Cost Models Q2 2026. Ramalan: model ETS, ARIMA, TFT, dan naive (tugas akhir). Data aktual sampai 2026Q1; proyeksi S&P tidak ditampilkan."
+  license_note: "Data berlisensi dan berhak cipta S&P Global. Hanya untuk penggunaan internal; dilarang menyebarkan, menyalin, atau mempublikasikan."
+
 output:
   models_dir: "models"
   outputs_dir: "outputs"

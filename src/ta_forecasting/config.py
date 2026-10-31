@@ -255,6 +255,40 @@ class ForecastConfig(BaseModel):
     report_prefix: str = "phase7"
 
 
+class DashboardConfig(BaseModel):
+    """Phase 7b Streamlit dashboard settings."""
+
+    host: str = "127.0.0.1"
+    port: int = Field(8501, ge=1, le=65535)
+    gather_usage_stats: bool = False
+    title: str = "Dashboard Pra-Pengadaan"
+    value_label: str = "Indeks biaya"
+    default_models: list[str] = Field(default_factory=lambda: ["ets", "arima", "naive"])
+    default_base_year: int = 2003
+    default_start_year: int = 2003
+    default_concept: str | None = None
+    interval_max_step: int = Field(8, ge=0)
+    error_steps: list[int] = Field(default_factory=lambda: [1, 4, 8, 23])
+    table_decimals: int = Field(1, ge=0)
+    description_dataset: str = "Cost_Model_Desc"
+    description_id: str = "ID"
+    description_text: str = "Description"
+    lookup_label: str = "Label"
+    lookup_currency: str = "Local currency"
+    colors: dict[str, str] = Field(default_factory=dict)
+    interval_opacity: float = Field(0.15, ge=0, le=1)
+    chart_height: int = Field(520, ge=200)
+    model_warnings: dict[str, str] = Field(default_factory=dict)
+    source_note: str = ""
+    license_note: str = ""
+
+    @model_validator(mode="after")
+    def _local_only(self) -> DashboardConfig:
+        if self.gather_usage_stats:
+            raise ValueError("dashboard.gather_usage_stats must stay false (no outbound calls).")
+        return self
+
+
 class OutputConfig(BaseModel):
     """Paths to output directories and model artefact file names."""
 
@@ -285,6 +319,7 @@ class Config(BaseModel):
     tft: TFTConfig = Field(default_factory=TFTConfig)
     report: ReportConfig = Field(default_factory=ReportConfig)
     forecast: ForecastConfig = Field(default_factory=ForecastConfig)
+    dashboard: DashboardConfig = Field(default_factory=DashboardConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
 

@@ -37,6 +37,10 @@ dependencies = [
     "matplotlib>=3.8,<4",
     "seaborn>=0.13,<1",
 
+    # Dashboard (Phase 7b, local / internal network only)
+    "streamlit>=1.66,<2",
+    "plotly>=7.1,<8",
+
     # CLI
     "typer[all]>=0.12,<1",
 

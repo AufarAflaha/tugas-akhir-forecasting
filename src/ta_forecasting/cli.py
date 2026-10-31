@@ -241,6 +241,35 @@ def forecast(
     typer.echo(f"Wrote {len(result.files)} file(s) | log: {log_path}")
 
 
+@app.command()
+def dashboard(
+    config: ConfigOption = Path("configs/config.yaml"),
+) -> None:
+    """Start the Streamlit dashboard on dashboard.host:dashboard.port (local only)."""
+    import os
+    import subprocess
+    import sys
+
+    cfg = _init(config)
+    from ta_forecasting.dashboard import data as dd
+
+    missing = [str(p) for p in dd.input_paths(cfg).values() if not p.exists()]
+    if missing:
+        typer.echo("Missing inputs: " + ", ".join(missing) + ". Run `forecast` first.", err=True)
+        raise typer.Exit(1)
+    app_file = Path(dd.__file__).with_name("app.py")
+    d = cfg.dashboard
+    cmd = [
+        sys.executable, "-m", "streamlit", "run", str(app_file),
+        "--server.address", d.host, "--server.port", str(d.port),
+        "--server.headless", "true",
+        "--browser.gatherUsageStats", str(d.gather_usage_stats).lower(),
+    ]
+    env = {**os.environ, "TA_FORECASTING_CONFIG": str(config.resolve())}
+    typer.echo(f"Dashboard: http://{d.host}:{d.port} (Ctrl+C to stop)")
+    raise typer.Exit(subprocess.call(cmd, env=env))
+
+
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------

@@ -18,7 +18,7 @@ Proyek ini mengikuti kerangka kerja **CRISP-DM** dengan fase-fase berikut:
 | 4 | Modeling | ✅ |
 | 5 | Evaluation | ✅ |
 | 6 | Reporting | ✅ |
-| 7 | Deployment: ramalan sampai 2031 (7a) dan dashboard (7b) | 🔄 7a ✅, 7b sedang dikerjakan |
+| 7 | Deployment: ramalan sampai 2031 (7a) dan dashboard (7b) | ✅ (revisi dashboard menyusul) |
 
 
 ## Struktur Proyek
@@ -82,6 +82,9 @@ python -m ta_forecasting.cli report --config configs/config.yaml
 
 # Fase 7a: Backtest jangka panjang, interval empiris, dan ramalan sampai 2031Q4
 python -m ta_forecasting.cli forecast --config configs/config.yaml
+
+# Fase 7b: Dashboard web lokal (http://127.0.0.1:8501, Ctrl+C untuk berhenti)
+python -m ta_forecasting.cli dashboard --config configs/config.yaml
 ```
 
 ## Fase 3: Persiapan Data
@@ -200,8 +203,27 @@ Model Fase 4 hanya di-load; prosedurnya sama dengan hasil utama Fase 5
 | `data/processed/forecast.parquet`, `forecast_summary.parquet` | Ramalan dan ringkasan per seri | Tidak |
 | `reports/phase7_*.csv`, `reports/phase7_long_horizon.md` | Galat per horizon, kuantil interval, cakupan, ringkasan jumlah seri (agregat) | Ya (setelah disetujui) |
 
-Asumsi Fase 7a: A55–A61 di `docs/ASSUMPTIONS.md`. Pengecualian data untuk dashboard: aturan
+Asumsi Fase 7a: A55–A62 di `docs/ASSUMPTIONS.md`. Pengecualian data untuk dashboard: aturan
 no. 6 di `AGENTS.md`.
+
+## Fase 7b: Dashboard pra-pengadaan
+
+Modul: `src/ta_forecasting/dashboard/` (`data.py` untuk tabel, `charts.py` untuk grafik Plotly,
+`app.py` untuk aplikasi Streamlit). Parameter ada di blok `dashboard` pada
+`configs/config.yaml`. Jalankan `forecast` terlebih dahulu, lalu `dashboard`; buka
+http://127.0.0.1:8501 di browser.
+
+| Halaman | Isi |
+|---------|-----|
+| Detail cost model | Panel kiri: cost model, region, model peramalan (multi-select; default ETS, ARIMA, naive), tahun dasar, rentang tahun, deskripsi. Grafik: aktual, ramalan tiap model, interval 80% (sampai h = 8), area tervalidasi/jangka panjang, batang QoQ. Tabel perbandingan model (MAPE per horizon, kuartal termurah, selisih %, bermakna atau tidak, kesepakatan) dan tabel tahunan. |
+| Ringkasan semua cost model | 116 cost model: kuartal termurah dan selisih % per model, kesepakatan; filter Concept/Region, urut per kolom, unduh CSV (internal). |
+| Tentang model | Akurasi uji Fase 5, MAPE backtest per horizon, cakupan interval, keterbatasan. |
+
+Label di UI adalah "indeks biaya", bukan harga. Dashboard tidak memberi rekomendasi tunggal;
+keputusan pengadaan tetap di tangan pengguna. Dashboard hanya berjalan lokal (A64) dan
+menampilkan nilai seri asli kepada pengguna internal (aturan no. 6 di `AGENTS.md`).
+
+Asumsi Fase 7b: A63–A70 di `docs/ASSUMPTIONS.md`.
 
 
 ## Catatan Penting

@@ -1,0 +1,12 @@
+# Local / internal use only (AGENTS.md data rule 6). Applies when Streamlit is started from
+# the project root, including `streamlit run` without the CLI wrapper.
+[browser]
+gatherUsageStats = false
+
+[server]
+address = "127.0.0.1"
+headless = true
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = false
